@@ -1,0 +1,79 @@
+8-Week Project Execution Plan: Dynamic Spatio-Temporal GNN for Real-Time Fraud Topology & AML
+
+This document provides a comprehensive week-by-week implementation roadmap for the **Dynamic Spatio-Temporal Graph Neural Network (ST-GNN) for Real-Time Fraud Topology & Anti-Money Laundering (AML)** project[cite: 1]. It is structured for an 8-week academic or development cycle, taking the system from raw data ingestion to a zero-cost production deployment sustaining 50 to 100 Transactions Per Second (TPS)[cite: 1].
+
+---
+
+# Weekly Overview Table
+
+| Week | Phase / Focus Area | Core Milestone / Deliverable |
+| :--- | :--- | :--- |
+| **Week 1** | Environment Setup & Ingestion | Memgraph deployed and Elliptic Dataset successfully loaded[cite: 1]. |
+| **Week 2** | Preprocessing & Feature Engineering | Cleaned graph schema and PyTorch Geometric data loaders ready. |
+| **Week 3** | Core Model Training (Offline) | Trained Spatio-Temporal GNN model saved with validated metrics. |
+| **Week 4** | Model Optimization & ONNX Export | Compiled `.onnx` model optimized for lightweight ARM CPU inference[cite: 1]. |
+| **Week 5** | Backend API & Pipeline Integration | FastAPI gateway connected to Memgraph and the ONNX runtime[cite: 1]. |
+| **Week 6** | Performance Testing & TPS Tuning | Load testing verified to sustain 50–100 TPS[cite: 1]. |
+| **Week 7** | Cloud Deployment (Zero-Cost VPS) | Containerized app live on Oracle Cloud "Always Free" VPS[cite: 1]. |
+| **Week 8** | Documentation & Presentation Prep | Final architecture diagrams, report, and slide decks completed[cite: 1]. |
+
+---
+
+## Detailed Weekly Breakdown & Operations
+
+### Week 1: Environment Setup & Data Ingestion
+* **Objective:** Provision infrastructure and load raw data into the graph database.
+* **Operations & Actions:**
+  * **Provision VPS:** Set up your Oracle Cloud "Always Free" VPS (24GB RAM) or configure a local Docker development environment[cite: 1].
+  * **Install Memgraph:** Deploy Memgraph via Docker and verify accessibility via Memgraph Lab (Cypher query shell)[cite: 1].
+  * **Download Dataset:** Download the **Elliptic Data Set** (nodes, edges, classes) or Kaggle financial transaction files[cite: 1].
+  * **Ingestion Scripting:** Write a Python script using `pandas` and Memgraph's Python client (`gqlalchemy` or `neo4j`) to parse CSV files and insert accounts (nodes) and transactions (edges) into Memgraph[cite: 1].
+
+### Week 2: Graph Feature Engineering & Preprocessing
+* **Objective:** Extract structural and temporal features ready for machine learning.
+* **Operations & Actions:**
+  * **Feature Extraction:** Write scripts to calculate local node features (in-degree, out-degree, transaction frequency) and normalize timestamps into sequential windows[cite: 1].
+  * **Train/Test Splitting:** Split the graph chronologically (respecting time-steps) to prevent data leakage during training.
+  * **PyG Loader Setup:** Convert Memgraph subgraphs and node features into `torch_geometric.data.Data` or `TemporalData` objects compatible with PyTorch Geometric[cite: 1].
+
+### Week 3: Core Model Training (Offline)
+* **Objective:** Implement, train, and validate the Spatio-Temporal GNN.
+* **Operations & Actions:**
+  * **Model Architecture Design:** Code your Dynamic Spatio-Temporal GNN combining a spatial message-passing layer (e.g., Graph Attention Networks - GAT) with a temporal sequence model (LSTM or GRU)[cite: 1].
+  * **Training Loop:** Write the training script in PyTorch/PyG, defining loss functions (Binary Cross Entropy for illicit vs. licit classes) and optimizers (Adam).
+  * **Evaluation & Tuning:** Run training epochs, track precision/recall on the minority fraud class, and save the best model checkpoint (`.pt`).
+
+### Week 4: Model Optimization & ONNX Export
+* **Objective:** Compile the model for lightweight, high-speed CPU inference[cite: 1].
+* **Operations & Actions:**
+  * **ONNX Conversion:** Write a Python script to export your trained PyTorch GNN model into the **ONNX (Open Neural Network Exchange)** format using `torch.onnx.export`[cite: 1].
+  * **Runtime Validation:** Load the `.onnx` file using `onnxruntime` and run test inferences against dummy inputs to verify numerical parity.
+  * **Latency Benchmarking:** Measure inference execution time on an ARM CPU core to ensure low-latency performance[cite: 1].
+
+### Week 5: Backend API & Streaming Inference Integration
+* **Objective:** Build the API gateway that connects incoming transactions to Memgraph and the ONNX model.
+* **Operations & Actions:**
+  * **FastAPI Development:** Build an asynchronous API endpoint (`/score-transaction`) using **Python FastAPI**.
+  * **Database Query Hook:** Write a function inside the API that queries Memgraph in real-time to fetch the 1-to-2-hop neighborhood of accounts involved in an incoming transaction[cite: 1].
+  * **Inference Pipeline:** Hook retrieved neighborhood features into your ONNX runtime session to generate an immediate risk score and flag anomalous subgraphs[cite: 1].
+
+### Week 6: Performance Testing & TPS Optimization
+* **Objective:** Hit the target throughput of **50 to 100 Transactions Per Second (TPS)**[cite: 1].
+* **Operations & Actions:**
+  * **Load Testing:** Use benchmarking tools like **Locust** or **Apache Benchmark (ab)** to simulate high concurrent traffic hitting your FastAPI endpoint.
+  * **Bottleneck Resolution:** Identify latency bottlenecks (slow database queries or synchronous loops). Implement connection pooling, asynchronous drivers, or caching layers for frequent lookups.
+  * **Verification:** Run load tests again to confirm the system stably handles **50–100 TPS** on CPU architecture[cite: 1].
+
+### Week 7: Cloud Deployment & Containerization
+* **Objective:** Push the production-ready system to your cloud VPS within the zero-cost budget[cite: 1].
+* **Operations & Actions:**
+  * **Docker Compose Setup:** Create a multi-container `docker-compose.yml` file combining your Memgraph instance, the FastAPI application, and the ONNX runtime model.
+  * **VPS Deployment:** Transfer your container configuration to your Oracle Cloud "Always Free" VPS and run `docker compose up -d`[cite: 1].
+  * **End-to-End Testing:** Send test requests to your public cloud IP endpoint to verify live tracking, ensuring operational costs stay strictly under ₹200/month[cite: 1].
+
+### Week 8: Documentation, Report Writing & Viva Preparation
+* **Objective:** Package the project for presentation, evaluation, and final submission.
+* **Operations & Actions:**
+  * **Architecture Diagrams:** Draw clear system data-flow diagrams showing how transactions flow from the API through Memgraph into the ONNX GNN engine.
+  * **Project Report:** Compile implementation details, performance benchmarks (TPS stats), and comparative advantages over static models into your final semester report[cite: 1].
+  * **Presentation Deck:** Prepare slide decks focusing on the problem solved, tech stack choices, and a live demo walkthrough[cite: 1].
