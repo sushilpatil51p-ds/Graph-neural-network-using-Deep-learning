@@ -1,0 +1,90 @@
+Week 1: Environment Setup & Data Ingestion — Detailed Step-by-Step GuideThis document outlines all the granular tasks, operations, and actions required to
+complete Week 1 of your project successfully. Each task is broken down sequentially so you can execute them one by one.Task 1: Initialize the Local Infrastructure 
+& Graph DatabaseObjective: Spin up Memgraph (your in-memory graph database) and ensure your environment can host and query graph topologies locally.  Step-by-Step 
+Execution:Verify Docker Installation: Open your terminal and run docker --version to ensure Docker Desktop is running properly on your machine.Run the Memgraph
+Container: Copy and execute the following Docker command in your terminal:Bashdocker run -d --name memgraph -p 7687:7687 -p 3000:3000 memgraph/memgraph-lab
+Verify Port Mappings:Port 7687 is reserved for the Bolt protocol (used by Python scripts to connect to Memgraph).Port 3000 opens Memgraph Lab (the visual user 
+interface).Access Memgraph Lab: Open your web browser and navigate to http://localhost:3000. You should see the dashboard interface ready to connect to your
+local database instance.Task 2: Download & Extract the Elliptic DatasetObjective: Acquire the baseline anti-money laundering (AML) dataset needed to populate 
+your graph network.  Step-by-Step Execution:Go to Kaggle: Navigate to the official Elliptic Data Set page on Kaggle.  Download the Archive: Download the 
+compressed ZIP file containing the dataset files.Extract Files Locally: Unzip the folder into your project directory (/data/elliptic/). Inside, you should 
+find the three primary CSV files:elliptic_txs_nodes.csv (Contains transaction IDs, node features, and classes: 1 = licit, 2 = illicit, unknown).elliptic_txs_edgeli
+st.csv (Contains directed edges mapping transactions sending money to other transactions).elliptic_txs_classes.csv (Contains explicit category labels for
+transactions).Task 3: Perform Exploratory Data Analysis (EDA)Objective: Inspect the data structure, check file dimensions, and understand the class imbalance
+before writing them to the database.Step-by-Step Execution:Create an EDA Script: Create a Python file named eda.py in your workspace.Write the Inspection 
+Code:Pythonimport pandas as pd
+
+# Load CSV files
+nodes_df = pd.read_csv("elliptic_txs_nodes.csv")
+edges_df = pd.read_csv("elliptic_txs_edgelist.csv")
+classes_df = pd.read_csv("elliptic_txs_classes.csv")
+
+print("Nodes Shape:", nodes_df.shape)
+print("Edges Shape:", edges_df.shape)
+print("Classes Shape:", classes_df.shape)
+
+# Merge classes with nodes to check distribution
+merged_nodes = pd.merge(nodes_df, classes_df, on="txId", how="left")
+print("\nClass Distribution:\n", merged_nodes["class"].value_counts())
+Run the Script: Execute python eda.py in your terminal to verify that your paths are correct and review the class breakdown (noting how illicit transactions
+form a small minority).Task 4: Design the Graph SchemaObjective: Map out how relational CSV rows translate into graph theory terminology (Nodes and Edges).Step-by-Step
+Execution:Define Node Properties:Label: :TransactionProperties: id (string/int), time_step (int), features (list/array of local attributes).Define Edge Properties:Type: 
+-[:TRANSFERS_TO]->Properties: Connects a source transaction node to a destination transaction node.Define Class Mapping: Ensure the class label (1 for licit, 2 for illicit)
+is stored as a property on the transaction node so the GNN can reference training labels later.Task 5: Write and Execute the Python Ingestion ScriptObjective: Bulk-load the
+parsed CSV records into Memgraph using Python and the Neo4j/Cypher driver.  Step-by-Step Execution:Install Python Packages: Run the following command to install required drivers:Bashpip install pandas neo4j
+Create ingest.py: Write the bulk-insertion script to handle batching (since graph files are large):Pythonimport pandas as pd
+from neo4j import GraphDatabase
+
+# Database connection URI
+uri = "bolt://localhost:7687"
+driver = GraphDatabase.driver(uri, auth=("", ""))
+
+def ingest_data():
+    print("Loading CSV files...")
+    nodes_df = pd.read_csv("elliptic_txs_nodes.csv")
+    classes_df = pd.read_csv("elliptic_txs_classes.csv")
+    edges_df = pd.read_csv("elliptic_txs_edgelist.csv")
+
+    # Merge nodes and classes
+    nodes_df = pd.merge(nodes_df, classes_df, on="txId", how="left")
+    nodes_df['class'] = nodes_df['class'].fillna("unknown")
+
+    print("Inserting nodes into Memgraph...")
+    with driver.session() as session:
+        # Batch insert nodes using UNWIND
+        query_nodes = """
+        UNWIND $rows AS row
+        CREATE (t:Transaction {id: row.txId, step: row.time_step, class: toString(row.class)})
+        """
+        # Insert in chunks of 5000 to prevent memory spikes
+        chunk_size = 5000
+        for i in range(0, len(nodes_df), chunk_size):
+            chunk = nodes_df.iloc[i:i+chunk_size]
+            rows = chunk.to_dict(orient="records")
+            session.run(query_nodes, rows=rows)
+
+    print("Inserting edges into Memgraph...")
+    with driver.session() as session:
+        query_edges = """
+        UNWIND $rows AS row
+        MATCH (source:Transaction {id: row.txId1})
+        MATCH (target:Transaction {id: row.txId2})
+        CREATE (source)-[:TRANSFERS_TO]->(target)
+        """
+        for i in range(0, len(edges_df), chunk_size):
+            chunk = edges_df.iloc[i:i+chunk_size]
+            rows = chunk.to_dict(orient="records")
+            session.run(query_edges, rows=rows)
+
+    print("Data ingestion completed successfully!")
+
+if __name__ == "__main__":
+    ingest_data()
+Run Ingestion: Execute python ingest.py and wait for the 
+script to push nodes and edges into your local Memgraph instance.Task 
+6: Verify Data in Memgraph LabObjective: Visually confirm that the transaction network 
+has been properly loaded into the database. 
+Step-by-Step Execution:Open your browser and go to 
+http://localhost:3000 (Memgraph Lab).Open the Query Execution tab.Run a test Cypher query to retrieve a sample of nodes and their connected edges:CypherMATCH (n:Transaction)-[r:TRANSFERS_TO]->(m:Transaction) 
+RETURN n, r, m LIMIT 50;
+Switch to the Graph Visualizer view inside Memgraph Lab to visually inspect the interconnected financial transaction network.
