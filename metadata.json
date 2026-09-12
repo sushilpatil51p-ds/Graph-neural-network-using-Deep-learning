@@ -1,0 +1,7 @@
+{
+  "name": "Dynamic Spatio-Temporal GNN - Fraud Topology & AML",
+  "description": "Dynamic Spatio-Temporal Graph Neural Network (ST-GNN) for real-time fraud topology and anti-money laundering detection with ONNX ARM CPU inference and Memgraph engine.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
