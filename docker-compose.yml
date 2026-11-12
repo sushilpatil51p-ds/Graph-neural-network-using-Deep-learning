@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  graphguard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Pass your Gemini API key at build time
+        # Set it in your shell: export GEMINI_API_KEY=your_key_here
+        GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    image: graphguard-ai:latest
+    container_name: graphguard-ai
+    ports:
+      - "3000:80"       # Access at http://localhost:3000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
