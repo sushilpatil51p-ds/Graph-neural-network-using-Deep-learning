@@ -22,12 +22,40 @@ import { CypherConsole } from './components/CypherConsole';
 import { EdgeTelemetryModal } from './components/EdgeTelemetryModal';
 import { ArchitectureModal } from './components/ArchitectureModal';
 import { SarExportModal } from './components/SarExportModal';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { LoginPage } from './components/LoginPage';
+import { fetchGraphData } from './services/api';
 
-export default function App() {
+function DashboardContent() {
+  const { token, isAuthenticated, isLoading: authLoading, user, logout } = useAuth();
+  const [dataSource, setDataSource] = useState<'db' | 'local'>('local');
+
   // Graph state
   const [data, setData] = useState(() => generateBaseGraphData());
   const [currentTimeStep, setCurrentTimeStep] = useState<number>(INITIAL_TIME_STEP);
   const [activeDataset, setActiveDataset] = useState<'elliptic' | 'paysim'>('elliptic');
+
+  // Initialize ONNX model & load from backend API when authenticated
+  useEffect(() => {
+    stGnnEngine.initOnnx();
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || !token) return;
+    let cancelled = false;
+    fetchGraphData(token)
+      .then(apiData => {
+        if (!cancelled && apiData.nodes.length > 0) {
+          setData(apiData);
+          setDataSource('db');
+        }
+      })
+      .catch(err => {
+        console.warn('API fetch failed, using local fallback:', err);
+        setDataSource('local');
+      });
+    return () => { cancelled = true; };
+  }, [isAuthenticated, token]);
 
   // UI state
   const [activeTab, setActiveTab] = useState<'topology' | 'embeddings' | 'cypher'>('topology');
@@ -355,6 +383,37 @@ export default function App() {
           onClose={() => setSarModalState({ isOpen: false })}
         />
       )}
+
+      {/* Subtle Auth & DB Status Pill */}
+      <div className="fixed bottom-14 left-4 z-30 flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-[10px] text-slate-400 backdrop-blur-sm">
+        <span className={`w-1.5 h-1.5 rounded-full ${dataSource === 'db' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+        <span>{dataSource === 'db' ? 'Live SQLite DB' : 'Local Fallback'}</span>
+        <span className="text-slate-600">|</span>
+        <span className="text-slate-300">{user?.username}</span>
+        <button onClick={logout} className="text-rose-400 hover:text-rose-300 ml-1 underline">
+          Logout
+        </button>
+      </div>
     </div>
+  );
+}
+
+function AuthGate() {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen w-screen bg-slate-950 text-slate-400 text-sm">
+        Initializing GraphGuard AI...
+      </div>
+    );
+  }
+  return isAuthenticated ? <DashboardContent /> : <LoginPage />;
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AuthGate />
+    </AuthProvider>
   );
 }

@@ -1,4 +1,5 @@
 import { GraphNode, GraphEdge, CypherQueryResult, InferenceTelemetry } from '../types';
+import { OnnxFraudClassifier } from './onnxInference';
 
 /**
  * Spatio-Temporal Graph Neural Network (ST-GNN) Simulator
@@ -205,6 +206,37 @@ export class StGnnInferenceEngine {
       rows,
       nodesAffected: rows.length,
     };
+  }
+
+  // ─── ONNX Model Integration ──────────────────────────────────────────────
+  public useOnnx = false;
+  private onnxClassifier: OnnxFraudClassifier | null = null;
+
+  public async initOnnx(): Promise<void> {
+    try {
+      this.onnxClassifier = await OnnxFraudClassifier.getInstance();
+      this.useOnnx = this.onnxClassifier.isLoaded;
+      if (this.useOnnx) console.log('✓ ST-GNN engine: ONNX scoring enabled');
+    } catch {
+      console.warn('⚠ ONNX init failed, using simulation fallback');
+      this.useOnnx = false;
+    }
+  }
+
+  public async scoreWithOnnx(node: GraphNode): Promise<number> {
+    if (!this.onnxClassifier || !this.useOnnx) return node.anomalyScore;
+    try {
+      const features = [
+        node.features.inDegree, node.features.outDegree,
+        node.features.transactedVolumeBtc, node.features.feeRateSats,
+        node.features.avgNeighborRisk, node.features.temporalVelocity,
+        node.features.burstScore, node.features.circularityIndex,
+      ];
+      const result = await this.onnxClassifier.predict(features);
+      return result.score;
+    } catch {
+      return node.anomalyScore;
+    }
   }
 }
 
