@@ -9,6 +9,7 @@ import {
   Layers,
   Database,
   Terminal,
+  CreditCard,
 } from 'lucide-react';
 import { InferenceTelemetry } from '../types';
 
@@ -19,6 +20,7 @@ interface HeaderProps {
   onOpenArchitecture: () => void;
   onOpenTelemetry: () => void;
   onOpenCypher: () => void;
+  onOpenPayPalModal: () => void;
   activeTab: 'topology' | 'embeddings' | 'cypher';
   setActiveTab: (tab: 'topology' | 'embeddings' | 'cypher') => void;
 }
@@ -30,6 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenArchitecture,
   onOpenTelemetry,
   onOpenCypher,
+  onOpenPayPalModal,
   activeTab,
   setActiveTab,
 }) => {
@@ -155,6 +158,16 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="bg-emerald-500/20 text-emerald-300 text-[10px] px-1 rounded border border-emerald-500/30">
               ₹0/mo
             </span>
+          </button>
+
+          {/* PayPal Sandbox Simulation Button */}
+          <button
+            onClick={onOpenPayPalModal}
+            className="flex items-center gap-1.5 bg-gradient-to-r from-[#003087] via-[#0079C1] to-cyan-500 hover:brightness-110 border border-cyan-400/60 px-3 py-1 rounded-lg text-white transition-all font-semibold shadow-md shadow-blue-900/30 text-xs animate-pulse"
+            title="Simulate Live PayPal Developer Sandbox Checkout & GNN Ingestion"
+          >
+            <CreditCard className="w-3.5 h-3.5 text-white" />
+            <span>Simulate Live PayPal Transaction</span>
           </button>
 
           {/* Architecture / Research Dossier */}

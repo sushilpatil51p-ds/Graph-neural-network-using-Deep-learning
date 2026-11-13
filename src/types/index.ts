@@ -82,3 +82,41 @@ export interface CypherQueryResult {
   rows: Array<Record<string, string | number | boolean>>;
   nodesAffected?: number;
 }
+
+export interface PayPalTransactionPayload {
+  orderId: string;
+  captureId?: string;
+  senderName: string;
+  senderEmail: string;
+  senderCountry?: string;
+  receiverEmail: string;
+  receiverEntity: string;
+  amount: number;
+  currency: string;
+  timestamp: number;
+  scenario?: 'legitimate_ecommerce' | 'smurfing_structuring' | 'synthetic_mule' | 'mixer_exfiltration';
+}
+
+export interface PayPalFraudAuditReport {
+  transactionId: string;
+  orderId: string;
+  status: 'COMPLETED' | 'FLAGGED' | 'FROZEN';
+  riskScore: number; // 0.0 to 1.0
+  isSuspicious: boolean;
+  verdict: 'CLEAR / LOW RISK' | 'SUSPICIOUS / SAR FILED' | 'CRITICAL / FROZEN';
+  topologyPattern: string;
+  gnnExplanation: string;
+  aiAuditSummary: string;
+  complianceRecommendations: string[];
+  features: {
+    amount: number;
+    currency: string;
+    velocity: number;
+    neighborRisk: number;
+    burstScore: number;
+    circularity: number;
+  };
+  timestamp: string;
+  newNodeId?: string;
+  newEdgeId?: string;
+}

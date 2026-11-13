@@ -30,3 +30,18 @@ export async function fetchGraphData(token: string) {
   ]);
   return { nodes, edges, rings };
 }
+
+export async function processPayPalTransaction(
+  payload: import('../types').PayPalTransactionPayload
+): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/process-transaction`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Transaction processing failed' }));
+    throw new Error(err.error || `HTTP error ${res.status}`);
+  }
+  return res.json();
+}

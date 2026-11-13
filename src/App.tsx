@@ -22,6 +22,8 @@ import { CypherConsole } from './components/CypherConsole';
 import { EdgeTelemetryModal } from './components/EdgeTelemetryModal';
 import { ArchitectureModal } from './components/ArchitectureModal';
 import { SarExportModal } from './components/SarExportModal';
+import { PayPalCheckoutModal } from './components/PayPalCheckoutModal';
+import { PayPalFraudAuditReport } from './types';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './components/LoginPage';
 import { fetchGraphData } from './services/api';
@@ -70,6 +72,8 @@ function DashboardContent() {
   // Modals
   const [showArchitectureModal, setShowArchitectureModal] = useState<boolean>(false);
   const [showTelemetryModal, setShowTelemetryModal] = useState<boolean>(false);
+  const [showPayPalModal, setShowPayPalModal] = useState<boolean>(false);
+  const [lastPayPalAudit, setLastPayPalAudit] = useState<PayPalFraudAuditReport | null>(null);
   const [sarModalState, setSarModalState] = useState<{
     isOpen: boolean;
     ring?: AnomalousRing | null;
@@ -276,6 +280,31 @@ function DashboardContent() {
     setActiveTab('cypher');
   };
 
+  // PayPal Live Transaction Capture & Bridge Handler
+  const handlePayPalTransactionAnalyzed = (result: {
+    report: PayPalFraudAuditReport;
+    newNode: any;
+    newEdge: any;
+  }) => {
+    setLastPayPalAudit(result.report);
+
+    // Dynamically insert new node & edge into the running graph state
+    if (result.newNode && result.newEdge) {
+      setData(prev => {
+        const filteredNodes = prev.nodes.filter(n => n.id !== result.newNode.id);
+        const filteredEdges = prev.edges.filter(e => e.id !== result.newEdge.id);
+        return {
+          ...prev,
+          nodes: [result.newNode, ...filteredNodes],
+          edges: [result.newEdge, ...filteredEdges],
+        };
+      });
+
+      // Highlight the sender node on the graph canvas
+      setSelectedNode(result.newNode);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
       {/* Top Header */}
@@ -286,6 +315,7 @@ function DashboardContent() {
         onOpenArchitecture={() => setShowArchitectureModal(true)}
         onOpenTelemetry={() => setShowTelemetryModal(true)}
         onOpenCypher={() => setActiveTab('cypher')}
+        onOpenPayPalModal={() => setShowPayPalModal(true)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
       />
@@ -382,6 +412,66 @@ function DashboardContent() {
           node={sarModalState.node}
           onClose={() => setSarModalState({ isOpen: false })}
         />
+      )}
+
+      {/* PayPal Sandbox Checkout & Fraud Bridge Modal */}
+      <PayPalCheckoutModal
+        isOpen={showPayPalModal}
+        onClose={() => setShowPayPalModal(false)}
+        onTransactionAnalyzed={handlePayPalTransactionAnalyzed}
+      />
+
+      {/* Floating PayPal AI Compliance Audit Banner (Visible after checkout) */}
+      {lastPayPalAudit && !showPayPalModal && (
+        <div className="fixed top-16 right-4 z-30 max-w-sm p-3 rounded-xl bg-slate-900/95 border border-cyan-500/40 shadow-2xl backdrop-blur-md animate-in slide-in-from-top-4 duration-200">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+            <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-bold flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
+              PayPal Live GNN Audit
+            </span>
+            <button
+              onClick={() => setLastPayPalAudit(null)}
+              className="text-slate-400 hover:text-white text-xs font-mono"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="mt-2 text-xs font-mono space-y-1 text-slate-300">
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">Order:</span>
+              <span className="text-cyan-400 font-semibold">{lastPayPalAudit.orderId}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">GNN Verdict:</span>
+              <span
+                className={`font-bold ${
+                  lastPayPalAudit.isSuspicious ? 'text-rose-400' : 'text-emerald-400'
+                }`}
+              >
+                {lastPayPalAudit.verdict}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">Anomaly Risk:</span>
+              <span
+                className={`font-bold ${
+                  lastPayPalAudit.riskScore >= 0.7 ? 'text-rose-400' : 'text-emerald-400'
+                }`}
+              >
+                {(lastPayPalAudit.riskScore * 100).toFixed(1)}%
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300 line-clamp-3 mt-1.5 pt-1.5 border-t border-slate-800/80">
+              {lastPayPalAudit.aiAuditSummary}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowPayPalModal(true)}
+            className="w-full mt-2 py-1 px-2 rounded bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-800/60 text-cyan-300 text-[11px] font-semibold text-center transition-colors"
+          >
+            Open Full PayPal Compliance Dossier
+          </button>
+        </div>
       )}
 
       {/* Subtle Auth & DB Status Pill */}
